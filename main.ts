@@ -1,12 +1,16 @@
-// Golden Hour Cover Studio — a gta6-cover-art-01 entry (Node 22, stdlib only).
+// Golden Hour Cover Studio — the entry program (Node 22, standard library only).
+// It hands the app in: it copies app/ and screenshots/ from beside this file to
+// /output and writes /output/dossier.json, the summary the judge reads, with the
+// vendored make.fun library. The app itself is plain static files a desktop
+// browser loads offline (app/index.html and its ES modules, no library, no
+// network request): four cover layouts, five colour grades, per-panel crop,
+// undo/redo, and PNG export at 1080x1080, 1080x1350 and 1920x1080.
 //
-// The program hands the app in: it copies app/ and screenshots/ from beside
-// this file into /output and writes /output/dossier.json with the vendored
-// make.fun library, which is what the gate re-derives and the judge reads.
-// Run it outside the grader with MAKEFUN_OUTPUT_DIR standing in for /output:
+// Try it locally with `node serve.ts`, then open http://localhost:8080.
+// Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-app.ts';
@@ -21,19 +25,17 @@ if (existsSync(join(here, 'screenshots'))) {
   cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 }
 
-// The gate's own caps (reference/gate.json): text_max_bytes shapes the
-// dossier text; the rest refuse anything the scorer would refuse, so a bad
-// build fails here first — more than 4 screenshots, one over 256 KiB, app/
-// over 993 files or 48 MiB, or a path under app/ over 1000 bytes.
-const dossierPath = join(out, 'dossier.json');
-writeFileSync(
-  dossierPath,
-  buildDossier(out, {
-    text_max_bytes: 163840,
-    screenshots: { max: 4, max_bytes: 262144 },
-    app_max_files: 993,
-    app_max_bytes: 50331648,
-    app_path_max_bytes: 1000,
-  }),
-);
-console.log(`Golden Hour entry written to ${out} (dossier.json ${statSync(dossierPath).size} bytes).`);
+// The scorer's own caps (from the kit's gate): only text_max_bytes shapes the
+// bytes; the others refuse an entry the scorer would refuse (more than 4
+// screenshots or one over 256 KiB; more than 993 files in app/ or 48 MiB of app
+// files, in all, or a path under app/ over 1000 bytes: app/ counts beside
+// /output's own 1000-entry cap, its screenshots/ and dossier.json).
+const dossier = buildDossier(out, {
+  text_max_bytes: 163840,
+  screenshots: { max: 4, max_bytes: 262144 },
+  app_max_files: 993,
+  app_max_bytes: 50331648,
+  app_path_max_bytes: 1000,
+});
+writeFileSync(join(out, 'dossier.json'), dossier);
+console.log(`wrote ${out}/dossier.json (${dossier.length} bytes)`);
