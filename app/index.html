@@ -3,85 +3,95 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Golden Hour Cover Studio — GTA 6-style cover art maker</title>
+<meta name="color-scheme" content="dark">
+<title>Golden Hour Cover Studio — Neon Coast</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<noscript><p class="noscript">Golden Hour Cover Studio needs JavaScript: the cover is drawn on a canvas in your browser.</p></noscript>
-<main class="app">
-  <section class="controls" aria-label="Cover controls">
-    <header>
-      <h1>Golden Hour</h1>
-      <p class="tagline">Cover Studio — turn any photo into GTA 6-style poster art, offline in your browser.</p>
-    </header>
+<noscript><p style="padding:24px;font:16px/1.5 system-ui,sans-serif">Golden Hour Cover Studio needs JavaScript: the cover is drawn on a canvas in your browser.</p></noscript>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">GH</span>
+    <div>
+      <h1>Golden Hour Cover Studio</h1>
+      <p class="tagline">Turn any photo into GTA-style cover art — offline, in your browser.</p>
+    </div>
+  </div>
+  <div class="city-chip" title="An invented city — no real place, no Rockstar artwork">NEON COAST</div>
+</header>
 
+<main class="studio">
+  <section class="stage" aria-label="Cover preview">
+    <canvas id="cover" width="1080" height="1080" aria-label="The cover art preview"></canvas>
+    <p class="stage-hint">Click a panel to select it, then drag it to reposition the photo. Scroll or use the zoom slider to zoom.</p>
+    <p id="status" class="status" role="status">Pick a photo to begin.</p>
+  </section>
+
+  <aside class="panel" aria-label="Cover controls">
     <section class="group">
-      <h2>1 · Layout</h2>
-      <div id="layouts" class="chips" role="group" aria-label="Cover layout"></div>
+      <h2>1 · Photo</h2>
+      <div class="thumbs" id="thumbs" role="group" aria-label="Sample photos"></div>
+      <label class="upload">Upload your own photo
+        <input id="upload" type="file" accept="image/*">
+      </label>
+      <p class="note">Photos never leave your machine. Samples: Unsplash, free to use.</p>
     </section>
 
     <section class="group">
-      <h2>2 · Photos</h2>
-      <p class="hint">Tap a panel on the cover, then tap a photo. Drag the photo to move it, scroll to zoom.</p>
-      <div id="photo-tray" class="tray" role="group" aria-label="Photo tray"></div>
-      <label class="upload">+ Add your own photos
-        <input id="upload" type="file" accept="image/*" multiple>
-      </label>
-      <p class="hint">Your photos never leave this machine — nothing is uploaded.</p>
-      <div class="panel-tools">
-        <span id="selected-panel" role="status">Panel 1 of 4</span>
-        <button id="zoom-out" type="button" title="Zoom the selected panel out">−</button>
-        <button id="zoom-in" type="button" title="Zoom the selected panel in">+</button>
-        <button id="reset-crop" type="button">Reset crop</button>
-        <button id="fill-all" type="button">Fill all panels</button>
+      <h2>2 · Layout</h2>
+      <div class="choices" id="layouts" role="group" aria-label="Layout"></div>
+    </section>
+
+    <section class="group">
+      <h2>3 · Grade</h2>
+      <div class="choices" id="grades" role="group" aria-label="Colour grade"></div>
+    </section>
+
+    <section class="group">
+      <h2>4 · Words</h2>
+      <label>Title <input id="title" type="text" maxlength="24" value="NEON COAST"></label>
+      <label>Subtitle <input id="subtitle" type="text" maxlength="32" value="golden hour"></label>
+    </section>
+
+    <section class="group">
+      <h2>5 · Selected panel</h2>
+      <p class="note" id="panelLabel">Panel 1 of 4 — hero</p>
+      <label>Zoom <input id="zoom" type="range" min="100" max="300" value="100" step="1"></label>
+      <div class="row">
+        <button id="resetCrop" type="button">Reset crop</button>
+        <button id="cyclePhoto" type="button">Next photo</button>
       </div>
     </section>
 
     <section class="group">
-      <h2>3 · Words</h2>
-      <label>Title
-        <input id="title-input" type="text" maxlength="30" value="NEON COAST">
-      </label>
-      <label>Subtitle
-        <input id="subtitle-input" type="text" maxlength="40" value="a golden hour story">
-      </label>
-      <label>Corner badge
-        <input id="badge-input" type="text" maxlength="32" value="EST. 2026 · NEON COAST">
-      </label>
-      <button id="title-pos" type="button">Title: bottom</button>
-    </section>
-
-    <section class="group">
-      <h2>4 · Grade &amp; finish</h2>
-      <div id="grades" class="chips" role="group" aria-label="Colour grade"></div>
-      <div class="checks">
-        <label><input id="toggle-frame" type="checkbox" checked> Poster frame</label>
-        <label><input id="toggle-grain" type="checkbox" checked> Film grain</label>
-        <label><input id="toggle-vignette" type="checkbox" checked> Vignette</label>
-        <label><input id="toggle-halftone" type="checkbox"> Halftone dots</label>
+      <h2>6 · Finish</h2>
+      <div class="toggles">
+        <label><input id="fxFrame" type="checkbox" checked> White frame</label>
+        <label><input id="fxGrain" type="checkbox" checked> Film grain</label>
+        <label><input id="fxVignette" type="checkbox" checked> Vignette</label>
+        <label><input id="fxHalftone" type="checkbox"> Halftone dots</label>
       </div>
-    </section>
-
-    <section class="group">
-      <h2>5 · Export</h2>
-      <div id="sizes" class="chips" role="group" aria-label="Export size"></div>
-      <div class="actions">
-        <button id="export-one" type="button" class="primary">Export PNG</button>
-        <button id="export-all" type="button">Export all 3 sizes</button>
-      </div>
-      <div class="actions">
+      <label>Export size
+        <select id="size">
+          <option value="1080x1080">Square · 1080 × 1080</option>
+          <option value="1080x1350">Portrait · 1080 × 1350</option>
+          <option value="1920x1080">Landscape · 1920 × 1080</option>
+          <option value="all">All three sizes</option>
+        </select>
+      </label>
+      <div class="row">
         <button id="undo" type="button" disabled>Undo</button>
         <button id="redo" type="button" disabled>Redo</button>
       </div>
-      <p id="status" role="status"></p>
-      <p id="shot-report" hidden></p>
+      <button id="export" class="primary" type="button">Export PNG</button>
     </section>
-  </section>
-
-  <section class="stage-wrap" aria-label="Cover preview">
-    <canvas id="stage" width="720" height="720" aria-label="The cover preview"></canvas>
-  </section>
+  </aside>
 </main>
+
+<footer class="foot">
+  <p>Golden Hour Cover Studio · an original cover maker. Anton &amp; Pacifico fonts under the SIL Open Font License (see app/fonts/OFL.txt). No Rockstar Games logo, artwork or font is used; “Neon Coast” is an invented city.</p>
+</footer>
+
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
