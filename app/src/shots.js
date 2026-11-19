@@ -1,7 +1,8 @@
-// Fixed scenes for screenshots: ?shot=cover shows the cover alone at
-// full size, ?shot=editor the editor with a photo loaded, ?shot=mosaic
+// Fixed scenes for the screenshots: ?shot=cover shows the cover alone
+// at full size, ?shot=editor the editor with a photo loaded, ?shot=mosaic
 // the nine-mosaic cover, ?shot=tilted the tilted-snapshot cover.
-// window.__shotReady is set once the scene is painted and fonts are in.
+// window.__shotReady is set once the scene has painted and the fonts
+// have arrived, so a screenshot tool knows when to capture.
 export async function runShot(shot, query, app) {
   const scenes = {
     cover: { layout: 'hero3', grade: 'sunset', title: 'SUNSET HEIST', subtitle: 'Neon Shore', badge: 'VICE CITY', stars: 5 },

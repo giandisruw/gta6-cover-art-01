@@ -1,7 +1,8 @@
-// Vice City Cover Studio — UI wiring (v2).
+// Vice City Cover Studio — the editor UI.
+//
 // Owns the editor state, undo/redo, photo uploads, drag-to-reframe,
-// zoom, shuffle, presets and PNG export. The drawing itself lives in
-// cover.js; fixed screenshot scenes live in shots.js.
+// zoom, shuffle, one-tap looks and PNG export. The drawing itself lives
+// in cover.js; the fixed screenshot scenes live in shots.js.
 import { drawCover, hitPanel, layoutGeometry, LAYOUTS, GRADES, PRESETS, SIZES, panelCount } from './cover.js';
 import { runShot } from './shots.js';
 
@@ -12,6 +13,8 @@ const SAMPLES = [
   { name: 'boulevard', src: 'samples/boulevard.jpg' },
 ];
 
+const MAX_PHOTOS = 6;
+
 const canvas = document.getElementById('cover');
 const ctx = canvas.getContext('2d');
 const statusEl = document.getElementById('status');
@@ -19,8 +22,9 @@ const zoomEl = document.getElementById('zoom');
 
 let nextPhotoId = 1;
 const photos = []; // { id, name, src }
-const images = new Map(); // id -> HTMLImageElement
+const images = new Map(); // photo id -> loaded HTMLImageElement
 
+// The whole cover, as one plain object: easy to snapshot for undo.
 const state = {
   layout: 'hero3',
   grade: 'sunset',
@@ -28,47 +32,48 @@ const state = {
   subtitle: 'Neon Shore',
   badge: 'VICE CITY',
   stars: 5,
-  slots: [], // { photo, zoom, ox, oy } — photo indexes into photos
+  preset: '',
+  slots: [], // { photo, zoom, ox, oy } — `photo` indexes into `photos`
   selected: 0,
 };
 
 const undoStack = [];
 const redoStack = [];
+const UNDO_LIMIT = 60;
 
-function snapshot() {
+function takeSnapshot() {
   return JSON.stringify({
     layout: state.layout, grade: state.grade, title: state.title,
     subtitle: state.subtitle, badge: state.badge, stars: state.stars,
-    slots: state.slots, selected: state.selected,
+    preset: state.preset, slots: state.slots, selected: state.selected,
   });
 }
 
-function restore(json) {
-  const s = JSON.parse(json);
-  Object.assign(state, s);
+function loadSnapshot(json) {
+  Object.assign(state, JSON.parse(json));
   syncControls();
   redraw();
 }
 
 function pushUndo() {
-  undoStack.push(snapshot());
-  if (undoStack.length > 60) undoStack.shift();
+  undoStack.push(takeSnapshot());
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
   redoStack.length = 0;
   updateUndoButtons();
 }
 
 function undo() {
   if (!undoStack.length) return;
-  redoStack.push(snapshot());
-  restore(undoStack.pop());
+  redoStack.push(takeSnapshot());
+  loadSnapshot(undoStack.pop());
   updateUndoButtons();
   setStatus('Undone.');
 }
 
 function redo() {
   if (!redoStack.length) return;
-  undoStack.push(snapshot());
-  restore(redoStack.pop());
+  undoStack.push(takeSnapshot());
+  loadSnapshot(redoStack.pop());
   updateUndoButtons();
   setStatus('Redone.');
 }
@@ -82,10 +87,10 @@ function setStatus(msg) {
   statusEl.textContent = msg;
 }
 
-/** (Re)build slots for the current layout, keeping photos in order. */
-function resetSlots(keepPhotos = true) {
+/** Rebuild the panel slots for the current layout, keeping photos in order. */
+function resetSlots(keep = true) {
   const n = panelCount(state.layout);
-  const old = keepPhotos ? state.slots : [];
+  const old = keep ? state.slots : [];
   state.slots = Array.from({ length: n }, (_, i) => {
     const prev = old[i];
     return prev ? { ...prev } : { photo: i % Math.max(photos.length, 1), zoom: 1, ox: 0, oy: 0 };
@@ -123,15 +128,20 @@ async function loadSamples() {
   redraw();
 }
 
-function redraw() {
-  drawCover(ctx, canvas.width, canvas.height, state, images, photos);
-  drawSelection();
-  document.getElementById('zoom').value = String(Math.round((state.slots[state.selected]?.zoom ?? 1) * 100));
-  document.getElementById('zoom-val').textContent = `${Math.round((state.slots[state.selected]?.zoom ?? 1) * 100)}%`;
+function selectedSlot() {
+  return state.slots[state.selected];
 }
 
-/** Outline the selected panel so the user can see what they are framing. */
-function drawSelection() {
+function redraw() {
+  drawCover(ctx, canvas.width, canvas.height, state, images, photos);
+  drawSelectionOutline();
+  const zoom = Math.round((selectedSlot()?.zoom ?? 1) * 100);
+  zoomEl.value = String(zoom);
+  document.getElementById('zoom-val').textContent = `${zoom}%`;
+}
+
+/** Dashed gold outline around the selected panel, so framing is visible. */
+function drawSelectionOutline() {
   if (document.body.classList.contains('shot-cover')) return;
   const geo = layoutGeometry(state.layout, canvas.width, canvas.height);
   const p = geo.panels[state.selected];
@@ -173,8 +183,7 @@ function renderThumbs() {
     img.src = p.src;
     img.alt = p.name;
     b.appendChild(img);
-    const used = state.slots.some((s) => s.photo === i);
-    b.classList.toggle('in-use', used);
+    b.classList.toggle('in-use', state.slots.some((s) => s.photo === i));
     b.addEventListener('click', () => {
       pushUndo();
       state.slots[state.selected] = { ...state.slots[state.selected], photo: i };
@@ -184,7 +193,7 @@ function renderThumbs() {
     });
     strip.appendChild(b);
   });
-  document.getElementById('photo-count').textContent = `${photos.length} / 6 photos`;
+  document.getElementById('photo-count').textContent = `${photos.length} / ${MAX_PHOTOS} photos`;
 }
 
 function applyPreset(preset) {
@@ -202,7 +211,7 @@ function applyPreset(preset) {
   setStatus(`Look applied: ${preset.name}.`);
 }
 
-function applyStatePatch(patch) {
+function applyPatch(patch) {
   pushUndo();
   Object.assign(state, patch);
   if (patch.layout) resetSlots(true);
@@ -210,7 +219,7 @@ function applyStatePatch(patch) {
   redraw();
 }
 
-// --- control wiring -------------------------------------------------------
+// --- control buttons ------------------------------------------------------
 
 function buildButtons() {
   const layoutBox = document.getElementById('layouts');
@@ -221,11 +230,12 @@ function buildButtons() {
     b.textContent = l.name;
     b.addEventListener('click', () => {
       if (state.layout === l.id) return;
-      applyStatePatch({ layout: l.id, preset: '' });
+      applyPatch({ layout: l.id, preset: '' });
       setStatus(`Layout: ${l.name}.`);
     });
     layoutBox.appendChild(b);
   });
+
   const gradeBox = document.getElementById('grades');
   GRADES.forEach((g) => {
     const b = document.createElement('button');
@@ -235,11 +245,12 @@ function buildButtons() {
     b.style.setProperty('--swatch', g.accent);
     b.addEventListener('click', () => {
       if (state.grade === g.id) return;
-      applyStatePatch({ grade: g.id, preset: '' });
+      applyPatch({ grade: g.id, preset: '' });
       setStatus(`Grade: ${g.name}.`);
     });
     gradeBox.appendChild(b);
   });
+
   const presetBox = document.getElementById('presets');
   PRESETS.forEach((p) => {
     const b = document.createElement('button');
@@ -249,6 +260,7 @@ function buildButtons() {
     b.addEventListener('click', () => applyPreset(p));
     presetBox.appendChild(b);
   });
+
   const sizeBox = document.getElementById('sizes');
   SIZES.forEach((s) => {
     const b = document.createElement('button');
@@ -259,6 +271,8 @@ function buildButtons() {
     sizeBox.appendChild(b);
   });
 }
+
+// --- text inputs ------------------------------------------------------------
 
 document.getElementById('title').addEventListener('change', (e) => {
   pushUndo();
@@ -284,18 +298,21 @@ document.getElementById('stars').addEventListener('change', (e) => {
   redraw();
 });
 
+// --- photos -----------------------------------------------------------------
+
 document.getElementById('photo').addEventListener('change', async (e) => {
-  const files = [...e.target.files].slice(0, 6 - photos.length);
+  const room = MAX_PHOTOS - photos.length;
+  const files = [...e.target.files].slice(0, Math.max(room, 0));
   if (!files.length) {
-    setStatus(photos.length >= 6 ? 'Already at 6 photos — the most a cover holds.' : 'No photo picked.');
+    setStatus(photos.length >= MAX_PHOTOS ? `Already at ${MAX_PHOTOS} photos — the most a cover holds.` : 'No photo picked.');
     e.target.value = '';
     return;
   }
   for (const file of files) {
     const dataUrl = await new Promise((resolve) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
     });
     await addPhoto(file.name.replace(/\.[^.]+$/, ''), dataUrl);
   }
@@ -324,24 +341,31 @@ document.getElementById('shuffle').addEventListener('click', () => {
   setStatus('Photos shuffled across the panels.');
 });
 
+// --- undo / redo ------------------------------------------------------------
+
 document.getElementById('undo').addEventListener('click', undo);
 document.getElementById('redo').addEventListener('click', redo);
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-  else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+  const mod = e.ctrlKey || e.metaKey;
+  if (!mod) return;
+  const key = e.key.toLowerCase();
+  if (key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 
-let zoomSnapshotTaken = false;
-zoomEl.addEventListener('pointerdown', () => { zoomSnapshotTaken = false; });
+// --- zoom slider ------------------------------------------------------------
+
+let zoomUndoTaken = false;
+zoomEl.addEventListener('pointerdown', () => { zoomUndoTaken = false; });
 zoomEl.addEventListener('input', () => {
-  if (!zoomSnapshotTaken) { pushUndo(); zoomSnapshotTaken = true; }
-  const slot = state.slots[state.selected];
+  if (!zoomUndoTaken) { pushUndo(); zoomUndoTaken = true; }
+  const slot = selectedSlot();
   if (!slot) return;
   slot.zoom = Number(zoomEl.value) / 100;
   redraw();
 });
 
-// --- canvas interaction: click to select, drag to reframe, scroll to zoom ---
+// --- canvas: click to select, drag to reframe, scroll to zoom ---------------
 
 function canvasPoint(e) {
   const r = canvas.getBoundingClientRect();
@@ -368,20 +392,18 @@ canvas.addEventListener('pointermove', (e) => {
   const p = canvasPoint(e);
   const slot = state.slots[drag.panel];
   if (!slot) return;
-  slot.ox += (p.x - drag.lastX) / canvas.width;
-  slot.oy += (p.y - drag.lastY) / canvas.height;
-  slot.ox = Math.max(-1, Math.min(1, slot.ox));
-  slot.oy = Math.max(-1, Math.min(1, slot.oy));
+  slot.ox = Math.max(-1, Math.min(1, slot.ox + (p.x - drag.lastX) / canvas.width));
+  slot.oy = Math.max(-1, Math.min(1, slot.oy + (p.y - drag.lastY) / canvas.height));
   drag.lastX = p.x;
   drag.lastY = p.y;
   redraw();
 });
 canvas.addEventListener('pointerup', () => { drag = null; });
+
 let lastWheelUndo = 0;
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
-  const idx = state.selected;
-  const slot = state.slots[idx];
+  const slot = state.slots[state.selected];
   if (!slot) return;
   const now = Date.now();
   if (!drag && now - lastWheelUndo > 800) { pushUndo(); lastWheelUndo = now; }
@@ -389,7 +411,7 @@ canvas.addEventListener('wheel', (e) => {
   redraw();
 }, { passive: false });
 
-// --- export ---------------------------------------------------------------
+// --- PNG export -------------------------------------------------------------
 
 function renderOffscreen(w, h) {
   const c = document.createElement('canvas');
@@ -413,8 +435,7 @@ function download(canvasEl, filename) {
 }
 
 async function exportSize(size) {
-  const off = renderOffscreen(size.w, size.h);
-  await download(off, `vice-city-cover-${size.w}x${size.h}.png`);
+  await download(renderOffscreen(size.w, size.h), `vice-city-cover-${size.w}x${size.h}.png`);
   setStatus(`Saved vice-city-cover-${size.w}x${size.h}.png`);
 }
 
@@ -429,13 +450,18 @@ document.getElementById('export-all').addEventListener('click', async () => {
   btn.disabled = false;
 });
 
-// --- test / shot hooks ------------------------------------------------------
+// --- hooks the tests and the screenshot scenes use --------------------------
 
 window.__coverApp = {
   get state() { return state; },
   get photos() { return photos; },
   get images() { return images; },
-  setState(patch) { Object.assign(state, patch); if (patch.layout) resetSlots(true); syncControls(); redraw(); },
+  setState(patch) {
+    Object.assign(state, patch);
+    if (patch.layout) resetSlots(true);
+    syncControls();
+    redraw();
+  },
   redraw,
   exportSize,
   renderOffscreen,
@@ -443,7 +469,7 @@ window.__coverApp = {
   redo,
 };
 
-// --- boot -------------------------------------------------------------------
+// --- boot ---------------------------------------------------------------------
 
 buildButtons();
 syncControls();
@@ -458,7 +484,12 @@ if (document.fonts?.ready) {
 redraw();
 if (shot) {
   await runShot(shot, query, {
-    setState: (patch) => { Object.assign(state, patch); if (patch.layout) resetSlots(true); syncControls(); redraw(); },
+    setState: (patch) => {
+      Object.assign(state, patch);
+      if (patch.layout) resetSlots(true);
+      syncControls();
+      redraw();
+    },
     setBodyClass: (cls) => document.body.classList.add(cls),
     ready: () => {
       if (document.fonts?.ready) return document.fonts.ready.then(() => redraw());
