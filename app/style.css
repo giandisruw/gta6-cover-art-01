@@ -1,3 +1,6 @@
+/* Vice City Cover Studio — editor styling. Dark neon-night chrome around
+   the bright poster canvas, Anton for headings, system sans for the rest. */
+
 @font-face {
   font-family: 'Anton';
   src: url('./fonts/Anton.woff2') format('woff2');
@@ -83,7 +86,7 @@ input[type=text], select {
 .undo-row { display: flex; gap: 8px; align-items: center; }
 .foot { padding: 0 24px 20px; color: #a894cc; font-size: 13px; }
 
-/* Screenshot mode: the cover alone, edge to edge. */
+/* Screenshot mode: the cover alone, edge to edge, no editor chrome. */
 body.shot-cover { background: #f7f3ea; }
 body.shot-cover .top, body.shot-cover .panel, body.shot-cover .foot,
 body.shot-cover .hint, body.shot-cover .zoom-row, body.shot-cover .export-row,
