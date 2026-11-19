@@ -1,87 +1,42 @@
-// Golden Hour Cover Studio — fixed scenes for screenshots.
-//
-// `?shot=cover` draws one exported cover full-frame; `?shot=editor` shows the
-// editor with a photo loaded; `?shot=export-test` proves the PNG export path
-// produces real PNG bytes. Every scene sets window.__shotReady once painted,
-// so a headless browser knows when to take the shot.
+// Fixed scenes for screenshots: ?shot=cover shows one exported cover alone,
+// ?shot=editor shows the full editor with a photo loaded.
+// Query knobs: layout, grade, photo, title, subtitle, size, panels (comma list).
+// Unknown panel photo names are dropped, so a typo never leaves a blank panel.
+// window.__shotReady is set once the scene is painted.
+import { SIZES, SAMPLES, defaultState } from './cover.js';
 
-import { panelCountFor } from './state.js';
-
-/** Wait until the two display fonts can actually draw. */
-async function fontsReady() {
-  try {
-    await Promise.all([
-      document.fonts.load('100px Anton'),
-      document.fonts.load('40px Pacifico'),
-    ]);
-    await document.fonts.ready;
-  } catch {
-    // A missing font falls back to the system faces; the scene still renders.
-  }
+function parsePanels(query) {
+  const raw = query.get('panels');
+  if (!raw) return null;
+  return raw.split(',').map((s) => s.trim()).filter((s) => SAMPLES.includes(s));
 }
 
-function markReady() {
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      window.__shotReady = true;
-    }),
-  );
-}
+export async function runShot(shot, query, api) {
+  const next = defaultState();
+  next.layout = query.get('layout') ?? next.layout;
+  next.grade = query.get('grade') ?? next.grade;
+  next.title = query.get('title') ?? next.title;
+  next.subtitle = query.get('subtitle') ?? next.subtitle;
+  const sizeKey = query.get('size');
+  if (sizeKey && SIZES[sizeKey]) next.size = sizeKey;
 
-/**
- * Run one scene. `studio` is the live app handed in by main.js: its state,
- * its photo map, and the functions that load a sample and repaint.
- */
-export async function runShot(shot, query, studio) {
-  const layout = query.get('layout');
-  const grade = query.get('grade');
-  const size = query.get('size');
-  const title = query.get('title');
-  const subtitle = query.get('subtitle');
-  const photo = query.get('photo');
-  const panels = query.get('panels'); // e.g. "woman-lake,man-portrait,valley-river"
-
-  if (layout) studio.state.layout = layout;
-  if (grade) studio.state.grade = grade;
-  if (size) studio.state.size = size;
-  if (title !== null) studio.state.title = title;
-  if (subtitle !== null) studio.state.subtitle = subtitle;
-
-  const keys = panels
-    ? panels.split(',').map((s) => s.trim()).filter(Boolean)
-    : photo
-      ? [photo]
-      : [];
-  // Fill every panel the layout shows: with fewer photos than panels, cycle
-  // through them instead of leaving empty "+ ADD A PHOTO" slots in the shot
-  // (the first poster-wall screenshot showed five empty panels).
-  const loaded = new Map();
-  for (const name of new Set(keys)) {
-    const img = await studio.loadSample(name);
-    if (img) loaded.set(name, img);
-  }
-  const usable = keys.filter((k) => loaded.has(k));
-  if (usable.length) {
-    const total = panelCountFor(studio.state.layout);
-    for (let i = 0; i < total; i++) {
-      studio.state.panels[i].photo = `sample:${usable[i % usable.length]}`;
-    }
+  const panels = parsePanels(query);
+  const single = query.get('photo');
+  if (panels) {
+    panels.forEach((photo, i) => {
+      if (next.panels[i]) next.panels[i].photo = photo;
+    });
+  } else if (single && SAMPLES.includes(single)) {
+    next.panels.forEach((p) => { p.photo = single; });
   }
 
-  await fontsReady();
-  studio.redraw();
-
-  if (shot === 'export-test') {
-    const canvas = document.createElement('canvas');
-    const { w, h } = studio.renderExport(canvas);
-    const url = canvas.toDataURL('image/png');
-    const report = document.getElementById('shot-report');
-    if (report) {
-      report.textContent =
-        `export-test ${w}x${h} data-url-bytes=${url.length} ` +
-        `png-signature=${url.slice(22, 32)}`;
-    }
-    window.__exportTest = { w, h, bytes: url.length, head: url.slice(0, 30) };
-  }
-  markReady();
+  api.apply(next);
+  if (shot === 'cover') document.body.classList.add('shot-cover');
+  if (shot === 'editor') document.body.classList.add('shot-editor');
+  // Let the fonts settle, then paint twice so the canvas is final.
+  try { await document.fonts.ready; } catch { /* fall back */ }
+  api.redraw();
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  api.redraw();
+  window.__shotReady = true;
 }
