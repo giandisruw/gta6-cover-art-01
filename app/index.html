@@ -3,90 +3,85 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vice City Cover Studio — Make GTA 6 Cover Art</title>
+<title>Golden Hour Cover Studio — GTA 6-style cover art maker</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<header class="top">
-  <div>
-    <h1>Vice City Cover Studio</h1>
-    <p>Turn any photo + caption into GTA-poster-style cover art. Fully offline — your photos never leave this machine.</p>
-  </div>
-  <p class="offline">OFFLINE · NO UPLOADS</p>
-</header>
-
+<noscript><p class="noscript">Golden Hour Cover Studio needs JavaScript: the cover is drawn on a canvas in your browser.</p></noscript>
 <main class="app">
-  <section class="stage">
-    <canvas id="cover" width="1080" height="1080" aria-label="The cover preview"></canvas>
-    <p class="hint">Click a panel to select it · drag to reframe · scroll to zoom · or use the slider below.</p>
-    <div class="zoom-row">
-      <label for="zoom">Zoom</label>
-      <input id="zoom" type="range" min="100" max="400" value="100" step="5">
-      <span id="zoom-val">100%</span>
-      <button id="shuffle" type="button">Shuffle photos</button>
-    </div>
-    <div class="export-row">
-      <div id="sizes" class="sizes"></div>
-      <button id="export-all" type="button" class="primary">Export all 4 sizes</button>
-    </div>
-    <p id="status" role="status">Loading sample photos…</p>
+  <section class="controls" aria-label="Cover controls">
+    <header>
+      <h1>Golden Hour</h1>
+      <p class="tagline">Cover Studio — turn any photo into GTA 6-style poster art, offline in your browser.</p>
+    </header>
+
+    <section class="group">
+      <h2>1 · Layout</h2>
+      <div id="layouts" class="chips" role="group" aria-label="Cover layout"></div>
+    </section>
+
+    <section class="group">
+      <h2>2 · Photos</h2>
+      <p class="hint">Tap a panel on the cover, then tap a photo. Drag the photo to move it, scroll to zoom.</p>
+      <div id="photo-tray" class="tray" role="group" aria-label="Photo tray"></div>
+      <label class="upload">+ Add your own photos
+        <input id="upload" type="file" accept="image/*" multiple>
+      </label>
+      <p class="hint">Your photos never leave this machine — nothing is uploaded.</p>
+      <div class="panel-tools">
+        <span id="selected-panel" role="status">Panel 1 of 4</span>
+        <button id="zoom-out" type="button" title="Zoom the selected panel out">−</button>
+        <button id="zoom-in" type="button" title="Zoom the selected panel in">+</button>
+        <button id="reset-crop" type="button">Reset crop</button>
+        <button id="fill-all" type="button">Fill all panels</button>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>3 · Words</h2>
+      <label>Title
+        <input id="title-input" type="text" maxlength="30" value="NEON COAST">
+      </label>
+      <label>Subtitle
+        <input id="subtitle-input" type="text" maxlength="40" value="a golden hour story">
+      </label>
+      <label>Corner badge
+        <input id="badge-input" type="text" maxlength="32" value="EST. 2026 · NEON COAST">
+      </label>
+      <button id="title-pos" type="button">Title: bottom</button>
+    </section>
+
+    <section class="group">
+      <h2>4 · Grade &amp; finish</h2>
+      <div id="grades" class="chips" role="group" aria-label="Colour grade"></div>
+      <div class="checks">
+        <label><input id="toggle-frame" type="checkbox" checked> Poster frame</label>
+        <label><input id="toggle-grain" type="checkbox" checked> Film grain</label>
+        <label><input id="toggle-vignette" type="checkbox" checked> Vignette</label>
+        <label><input id="toggle-halftone" type="checkbox"> Halftone dots</label>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>5 · Export</h2>
+      <div id="sizes" class="chips" role="group" aria-label="Export size"></div>
+      <div class="actions">
+        <button id="export-one" type="button" class="primary">Export PNG</button>
+        <button id="export-all" type="button">Export all 3 sizes</button>
+      </div>
+      <div class="actions">
+        <button id="undo" type="button" disabled>Undo</button>
+        <button id="redo" type="button" disabled>Redo</button>
+      </div>
+      <p id="status" role="status"></p>
+      <p id="shot-report" hidden></p>
+    </section>
   </section>
 
-  <aside class="panel">
-    <section>
-      <h2>Photos</h2>
-      <label class="file-label">Add photos (up to 6)
-        <input id="photo" type="file" accept="image/*" multiple>
-      </label>
-      <button id="samples" type="button">Use the 4 sample photos</button>
-      <div id="thumbs" class="thumbs"></div>
-      <p id="photo-count" class="muted">0 / 6 photos</p>
-      <p class="muted">Click a thumbnail to place that photo in the selected panel.</p>
-    </section>
-
-    <section>
-      <h2>Layout</h2>
-      <div id="layouts" class="buttons"></div>
-    </section>
-
-    <section>
-      <h2>Colour grade</h2>
-      <div id="grades" class="buttons grades"></div>
-    </section>
-
-    <section>
-      <h2>Lettering</h2>
-      <label>Title <input id="title" type="text" maxlength="30" value="SUNSET HEIST"></label>
-      <label>Subtitle <input id="subtitle" type="text" maxlength="30" value="Neon Shore"></label>
-      <label>Badge <input id="badge" type="text" maxlength="16" value="VICE CITY"></label>
-      <label>Heat meter
-        <select id="stars">
-          <option value="1">★ 1 star</option>
-          <option value="2">★★ 2 stars</option>
-          <option value="3">★★★ 3 stars</option>
-          <option value="4">★★★★ 4 stars</option>
-          <option value="5" selected>★★★★★ 5 stars</option>
-        </select>
-      </label>
-    </section>
-
-    <section>
-      <h2>One-tap looks</h2>
-      <div id="presets" class="buttons"></div>
-    </section>
-
-    <section class="undo-row">
-      <button id="undo" type="button">↩ Undo</button>
-      <button id="redo" type="button">Redo ↪</button>
-      <span class="muted">Ctrl+Z / Ctrl+Shift+Z</span>
-    </section>
-  </aside>
+  <section class="stage-wrap" aria-label="Cover preview">
+    <canvas id="stage" width="720" height="720" aria-label="The cover preview"></canvas>
+  </section>
 </main>
-
-<footer class="foot">
-  <p>Original art and lettering. Anton and Pacifico are vendored under the SIL Open Font License. No Rockstar Games logo, artwork or font is used.</p>
-</footer>
-
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
