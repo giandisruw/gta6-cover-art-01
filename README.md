@@ -31,7 +31,7 @@ and the app itself is plain HTML, CSS and JavaScript drawn on a canvas.
 
 - **Hero+3** — one big hero photo with three smaller panels underneath, the
   classic poster arrangement.
-- **2x2 Four Panel** — four equal panels in a grid.
+- **Four Panel** — four equal panels in a 2x2 grid.
 - **Nine Mosaic** — a 3x3 mosaic of nine photos with the title sitting in
   the centre cell.
 - **Full Bleed** — a single photo stretched edge to edge under the title.
@@ -135,21 +135,33 @@ from any third party at runtime.
 ## Verification
 
 Everything below was measured in this session on 19 November 2026, with
-Node v24.22.1 and headless Chromium — not copied from anywhere else.
+Node v24.22.1 and headless Chromium 157 — not copied from anywhere else.
+
+**Render engine checks.** 15 checks on `app/src/cover.js` (layouts,
+grades, presets, export sizes, panel counts, geometry bounds at four
+canvas sizes, hit-testing for every layout) — **15 passed, 0 failed**.
 
 **Deterministic dossier build.** `MAKEFUN_OUTPUT_DIR=out node main.ts`
 was run twice into two separate directories, then compared with
-`diff -r`: the two outputs were byte-identical. A third run into `out`
-matched them as well. The dossier directory totals **2,279,450 bytes**,
-including `dossier.json` at **1,018,825 bytes**.
+`diff -r`: the two outputs were byte-identical. The dossier directory
+totals **2,285,028 bytes**, including `dossier.json` at **1,021,784
+bytes**.
 
 **Offline app load.** The app was served with `node serve.ts` and every
 scene from `shots.json` was loaded in headless Chromium (the Hero+3,
 editor, Nine Mosaic and Tilted Snaps scenes). Across all four page loads
 the browser reported **0 console errors, 0 failed requests and
-0 external requests** out of 44 total requests — every request went to
-`localhost`. The three cover scenes each painted a **1080x1080 canvas**
-with real image pixels, and the editor scene rendered its full UI text.
+0 external requests** out of 11–12 requests per load — every request went
+to `localhost`. The three cover scenes each painted a **1080x1080 canvas**
+with real image pixels, and the editor scene rendered its full UI (5
+layouts, 6 grades, 5 looks, 4 export sizes, 4 sample thumbnails). An
+offscreen `1080x1080` export produced a real PNG blob, and an undo after
+a title edit restored the previous title.
+
+**Local pre-submit check.** `makefun check --worktree` from the kit:
+**4 passed, 0 failed** (17 skipped as site-side checks, 5 checked at
+submission: repository public, owned, created after the opening, commit
+pushed, snapshot not a duplicate).
 
 ## Licence
 
