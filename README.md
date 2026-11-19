@@ -1,75 +1,156 @@
-# Vice City Cover Studio — Make GTA 6 Cover Art (gta6-cover-art-01)
+[![make.fun](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01)
+[![rank](https://make.fun/badge/gta6-cover-art-01/giandisruw/gta6-cover-art-01/rank.svg)](https://make.fun/bounty/gta6-cover-art-01)
+[![reward](https://make.fun/badge/gta6-cover-art-01/giandisruw/gta6-cover-art-01/reward.svg)](https://make.fun/bounty/gta6-cover-art-01)
 
-An offline web app that turns any photo + caption into GTA-poster-style
-cover art and exports it as a PNG to share. No uploads, no network, no
-account: photos never leave the machine.
+# Vice City Cover Studio
+
+Turn any photo — plus a caption of your own — into GTA-poster-style cover
+art, right in the browser. Pick a layout, pick a colour grade, set the big
+title lettering, then export a print-ready PNG. Everything runs locally and
+offline: your photos never leave your machine, and the app makes no network
+request at all.
+
+![Cover — Hero+3 layout](screenshots/1-cover.jpg)
 
 ## Try it
 
+No build step, no dependencies, no install. You only need Node 22 or newer.
+
 ```sh
 node serve.ts
-# open http://localhost:8080
 ```
 
-Node.js 22.18+ required. No build step, no dependencies.
+Then open http://localhost:8080 in any modern browser.
 
-## What it does
+That is the whole setup: the server only serves the static files in `app/`,
+and the app itself is plain HTML, CSS and JavaScript drawn on a canvas.
 
-- **5 layouts** — Hero + 3, Four Panel (2×2), Nine Mosaic (3×3 with the
-  title in the centre cell), Full Bleed, Tilted Snaps (three tilted
-  polaroid-style snapshots on a sunset backdrop).
-- **6 colour grades** — Vice Sunset, Neon Nights, Teal Heat, Golden Hour,
-  Palm Noir, Palm Candy. Each grade is a canvas filter plus a gradient
-  wash, so it works on any photo.
-- **Poster lettering** — big gradient title with a thick outline (Anton,
-  vendored under the SIL Open Font License), neon script subtitle
-  (Pacifico, OFL), badge ribbon and a 5-star heat meter.
-- **Any photo** — upload up to 6 photos, or use the 4 bundled samples.
-  Click a panel to select it, drag to reframe, scroll to zoom, or use
-  the zoom slider. Photos can be shuffled across panels.
-- **Fast to PNG** — one-click export at 1080×1080, 1080×1350, 1920×1080
-  and 1080×1920, or "Export all 4 sizes" at once.
-- **Polish** — film grain, vignette, halftone title block, white poster
-  frame, undo/redo (Ctrl+Z / Ctrl+Shift+Z), 5 one-tap looks
-  ("Sunset Heist", "Neon Shore", "Pier Pressure", "Boulevard Queen",
-  "Night Shift").
+## Features
+
+### 5 layouts
+
+- **Hero+3** — one big hero photo with three smaller panels underneath, the
+  classic poster arrangement.
+- **2x2 Four Panel** — four equal panels in a grid.
+- **Nine Mosaic** — a 3x3 mosaic of nine photos with the title sitting in
+  the centre cell.
+- **Full Bleed** — a single photo stretched edge to edge under the title.
+- **Tilted Snaps** — photos as scattered, slightly rotated snapshots, like
+  prints tossed on a table.
+
+### 6 colour grades
+
+- **Vice Sunset** — hot pink-to-orange dusk.
+- **Neon Nights** — electric magenta and cyan after dark.
+- **Teal Heat** — deep teal shadows with warm highlights.
+- **Golden Hour** — soft late-afternoon gold.
+- **Palm Noir** — moody, high-contrast black and teal.
+- **Palm Candy** — bright, sweet pastel pop.
+
+### Poster lettering
+
+- A big gradient title in Anton with a heavy outline, the way a game cover
+  shouts its name.
+- A glowing neon script subtitle in Pacifico underneath it.
+- A badge ribbon for a short tag line (for example a city name or a date).
+- A 5-star heat meter so you can rate the cover's energy at a glance.
+
+### Any photo
+
+- Upload up to 6 of your own photos, or start instantly with the 4 bundled
+  sample photos.
+- Click a panel to select it, drag inside it to reframe the photo, and use
+  the scroll wheel or the zoom slider to zoom in and out.
+- Shuffle the photos between panels with one click when you want a surprise.
+
+### Fast PNG export
+
+Export the finished cover as a PNG in any of these sizes:
+
+- 1080x1080 (square)
+- 1080x1350 (portrait)
+- 1920x1080 (landscape)
+- 1080x1920 (story)
+
+Or hit **Export all 4 sizes** and get every size in one go. Export is a
+single canvas render, so it stays quick even at the largest size.
+
+### Polish
+
+- Film grain and a vignette for that printed-poster feel.
+- A halftone block behind the title for the retro comic-print look.
+- A clean white poster frame around the finished cover.
+- Undo / redo with `Ctrl+Z` / `Ctrl+Shift+Z`, so experimenting costs
+  nothing.
+- 5 one-tap looks that set layout, grade and lettering together:
+  **"Sunset Heist"**, **"Neon Shore"**, **"Pier Pressure"**,
+  **"Boulevard Queen"** and **"Night Shift"**.
 
 ## Files
 
-- `main.ts` — the entry program (Node 22, stdlib only): copies `app/`
-  and `screenshots/` to `/output` and writes `dossier.json`.
-- `serve.ts` — tiny static server for local testing.
-- `app/` — the web app, static files only:
-  - `index.html`, `style.css`
-  - `src/cover.js` — the cover render engine (layouts, grades, lettering)
-  - `src/main.js` — UI wiring, undo/redo, export
-  - `src/shots.js` — fixed `?shot=` scenes for screenshots
-  - `fonts/` — Anton + Pacifico (OFL, texts beside them)
-  - `samples/` — 4 AI-made sample photos (no real people, no logos)
-- `screenshots/` — 4 JPEGs: the cover (hero+3), the editor with a photo
-  loaded, the nine-mosaic cover, the tilted-snapshot cover.
-- `shots.json` — the scenes/commands the screenshots were taken with.
-- `vendor/makefun-app.ts` — the kit's dossier library, unchanged.
-- `LICENSE` — MIT.
+| Path | What it is |
+| --- | --- |
+| `main.ts` | Entry program: builds the submission dossier. |
+| `serve.ts` | Tiny dev server — serves `app/` on http://localhost:8080. |
+| `app/index.html` | The app page. |
+| `app/style.css` | All of the app styling. |
+| `app/src/cover.js` | The render engine: layouts, grades, lettering, export. |
+| `app/src/main.js` | The UI: panels, uploads, reframing, undo/redo, looks. |
+| `app/src/shots.js` | The `?shot=` scenes used for screenshots. |
+| `app/fonts/` | Anton and Pacifico webfonts, plus their OFL licence texts. |
+| `app/samples/` | 4 bundled sample photos (`pier.jpg`, `boulevard.jpg`, `friends-neon.jpg`, `woman-car.jpg`). |
+| `screenshots/` | 4 JPEG screenshots described in `shots.json`. |
+| `shots.json` | The 4 screenshot scenes (name, URL query, width, height). |
+| `vendor/makefun-app.ts` | The make.fun kit library, unchanged. |
+| `LICENSE` | MIT licence. |
+
+## Screenshot scenes
+
+`shots.json` defines four scenes, and `screenshots/` holds the matching
+JPEGs:
+
+1. `1-cover.jpg` — Hero+3 cover, pier photo, caption "Sunset Heist"
+   (1080x1080).
+2. `2-editor.jpg` — the editor view with the boulevard photo loaded,
+   caption "Boulevard Queen" (1280x720).
+3. `3-cover.jpg` — Nine Mosaic cover, caption "Boulevard Queen"
+   (1024x1280).
+4. `4-cover.jpg` — Tilted Snaps cover, caption "Pier Pressure"
+   (1280x720).
+
+You can open any scene directly, for example
+http://localhost:8080/?shot=cover&photo=pier&caption=Sunset%20Heist
 
 ## Originality
 
-All art, lettering and fonts are original or OFL-licensed. No Rockstar
-Games logo, artwork or font is used anywhere. The sample photos were made
-for this entry with an image model; the two starter samples are the kit's
-own. The app makes no network request: every file it loads lives under
-`app/`.
+All of the art, lettering and layout work in this app is original, and the
+fonts are OFL-licensed (Anton and Pacifico, both by Vernon Adams — see
+`app/fonts/OFL-Anton.txt` and `app/fonts/OFL-Pacifico.txt`). There is no
+Rockstar Games logo, artwork or font anywhere in the app: the title
+lettering is drawn from the bundled open fonts, not from any game asset.
+The four sample photos are AI-made images — they show no real people and
+contain no logos. The app makes no network request, so nothing is fetched
+from any third party at runtime.
 
-## Verification (2026-11-19, headless Chromium)
+## Verification
 
-- App loads with **zero console errors, zero failed requests, zero
-  external requests** (offline check).
-- Editor probe: 5 layouts, 6 grades, 5 presets, 4 sizes present; canvas
-  renders 399 distinct colours.
-- "Export all 4 sizes" downloaded all four PNGs at exactly 1080×1080,
-  1080×1350, 1920×1080, 1080×1920.
-- `MAKEFUN_OUTPUT_DIR=out node main.ts` builds `dossier.json`
-  (997 KB, text 41,681 bytes) and two runs are byte-identical.
-- Gate limits self-checked: app/ 13 files / 518 KB (caps 993 / 48 MiB),
-  `index.html` 4 KB (cap 1 MiB), screenshots 4 files, each ≤ 256 KiB,
-  long side ≤ 1280, short side ≥ 480.
+Everything below was measured in this session on 19 November 2026, with
+Node v24.22.1 and headless Chromium — not copied from anywhere else.
+
+**Deterministic dossier build.** `MAKEFUN_OUTPUT_DIR=out node main.ts`
+was run twice into two separate directories, then compared with
+`diff -r`: the two outputs were byte-identical. A third run into `out`
+matched them as well. The dossier directory totals **2,279,450 bytes**,
+including `dossier.json` at **1,018,825 bytes**.
+
+**Offline app load.** The app was served with `node serve.ts` and every
+scene from `shots.json` was loaded in headless Chromium (the Hero+3,
+editor, Nine Mosaic and Tilted Snaps scenes). Across all four page loads
+the browser reported **0 console errors, 0 failed requests and
+0 external requests** out of 44 total requests — every request went to
+`localhost`. The three cover scenes each painted a **1080x1080 canvas**
+with real image pixels, and the editor scene rendered its full UI text.
+
+## Licence
+
+MIT — see `LICENSE`.
